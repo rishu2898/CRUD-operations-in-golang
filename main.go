@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-	"strconv"
 )
 
 type Employee struct {
@@ -18,6 +17,7 @@ type Employee struct {
 	Gender string `json:"gender"`
 	Role   int    `json:"role"`
 }
+
 // variable for holding the database
 var DB *sql.DB
 
@@ -34,6 +34,7 @@ func CreateTable() {
 		fmt.Println("tale not created")
 	}
 }
+
 // function to connect the database
 func ConnectDB() {
 	db, err := sql.Open("mysql", "rishabh:Rishu2898@@(127.0.0.1)/company")
@@ -49,6 +50,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to the HomePage!")
 	fmt.Println("Endpoint Hit: homePage")
 }
+
 // function to store the data from database into slice
 func storeRecord() []Employee {
 	var emp []Employee
@@ -66,6 +68,7 @@ func storeRecord() []Employee {
 	}
 	return emp
 }
+
 // function for find all record
 func returnAllEmployees(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: returnAllArticles")
@@ -76,23 +79,31 @@ func returnAllEmployees(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(data)
 }
+
 // function for return particular single record
 func returnSingleEmployee(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	key := vars["id"]
-	emp := storeRecord()
-	for _, rec := range emp {
-		if strconv.Itoa(rec.Id) == key {
-			data, err := json.Marshal(rec)
+	if r.Method == "GET" {
+		vars := mux.Vars(r)
+		key := vars["id"]
+		res, _ := DB.Query(fmt.Sprintf("SELECT * FROM employee WHERE id=%v", key))
+
+		var emp []Employee
+		for res.Next() {
+			var row Employee
+			err := res.Scan(&row.Id, &row.Name, &row.Age, &row.Gender, &row.Role)
 			if err != nil {
-				panic(err)
+				panic(err.Error())
 			}
-			w.Write(data)
+			emp = append(emp, row)
+		}
+		if len(emp) == 0 {
+			fmt.Fprintf(w, "%v not found", http.StatusNoContent)
 			return
 		}
+		json.NewEncoder(w).Encode(emp)
 	}
-	fmt.Fprintf(w, "%v page not found", http.StatusNotFound)
 }
+
 // function for insert record
 func InsertRecord(w http.ResponseWriter, r *http.Request) {
 	var emp Employee
@@ -110,6 +121,7 @@ func InsertRecord(w http.ResponseWriter, r *http.Request) {
 		res.Close()
 	}
 }
+
 // function for update single record
 func UpdateSingleRecord(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "PUT" {
@@ -154,11 +166,11 @@ func DeleteSingleRecord(w http.ResponseWriter, r *http.Request) {
 func handleRequests() {
 	myRouter := mux.NewRouter().StrictSlash(true)
 	myRouter.HandleFunc("/", homePage)
-	myRouter.HandleFunc("/employees", returnAllEmployees).Methods("GET")
+	myRouter.HandleFunc("/employee", returnAllEmployees).Methods("GET")
 	myRouter.HandleFunc("/employee/{id}", returnSingleEmployee).Methods("GET")
-	myRouter.HandleFunc("/insert", InsertRecord).Methods("POST")
-	myRouter.HandleFunc("/update/{id}", UpdateSingleRecord).Methods("PUT")
-	myRouter.HandleFunc("/delete/{id}", DeleteSingleRecord).Methods("DELETE")
+	myRouter.HandleFunc("/employee", InsertRecord).Methods("POST")
+	myRouter.HandleFunc("/employee/{id}", UpdateSingleRecord).Methods("PUT")
+	myRouter.HandleFunc("/employee/{id}", DeleteSingleRecord).Methods("DELETE")
 
 	log.Fatal(http.ListenAndServe(":8000", myRouter))
 }
