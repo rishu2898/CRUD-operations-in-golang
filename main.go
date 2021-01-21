@@ -18,7 +18,7 @@ type Employee struct {
 	Gender string `json:"gender"`
 	Role   int    `json:"role"`
 }
-
+// variable for holding the database
 var DB *sql.DB
 
 // function to create the table into database
@@ -52,7 +52,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 // function to store the data from database into slice
 func storeRecord() []Employee {
 	var emp []Employee
-	dis, err := DB.Query("select * from employee")
+	dis, err := DB.Query("select id, name, age, gender, role from employee")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -101,7 +101,7 @@ func InsertRecord(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-		res, err := DB.Query(fmt.Sprintf("INSERT INTO employee(id, name, age, gender, role) VALUES(%v, '%v', %v, '%v', '%v')", emp.Id, emp.Name, emp.Age, emp.Gender, emp.Role))
+		res, err := DB.Query(fmt.Sprintf("INSERT INTO employee(name, age, gender, role) VALUES('%v', %v, '%v', '%v')", emp.Name, emp.Age, emp.Gender, emp.Role))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -165,4 +165,5 @@ func handleRequests() {
 func main() {
 	ConnectDB()
 	handleRequests()
+	defer DB.Close()
 }
