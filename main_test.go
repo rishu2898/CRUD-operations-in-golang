@@ -13,6 +13,7 @@ import (
 )
 
 func TestReturnSingleEmployee(t *testing.T) {
+	// @NOTE: the real connection is not required for tests
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		fmt.Println("error creating mock database")
