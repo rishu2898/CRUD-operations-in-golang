@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Employee struct {
@@ -74,15 +75,14 @@ func (empHandler *EmployeeHandler) returnAllEmployees(w http.ResponseWriter, r *
 func (empHandler *EmployeeHandler) returnSingleEmployee(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		vars := mux.Vars(r)
-		key := vars["id"]
+		key, _ := strconv.Atoi(vars["id"])
 		res, _ := empHandler.DB.Query("SELECT id, name, age, gender, role FROM employee WHERE id = ?", key)
-
 		var emp []Employee
 		for res.Next() {
 			var row Employee
 			err := res.Scan(&row.Id, &row.Name, &row.Age, &row.Gender, &row.Role)
 			if err != nil {
-				log.Fatal("err in res.scan method")
+				log.Fatal(err)
 			}
 			emp = append(emp, row)
 		}
@@ -157,8 +157,7 @@ func handleRequests() {
 	// connecting to the database
 	db, err := sql.Open("mysql", "rishabh:Rishu2898@@(127.0.0.1)/company")
 	if err != nil {
-		log.Println("here error")
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	empHandler := &EmployeeHandler{DB: db}
 
