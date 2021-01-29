@@ -27,6 +27,7 @@ func TestReturnSingleEmployee(t *testing.T) {
 	testCases := []Employee{
 		{1, "rk", 22, "M", 2},
 		{6, "seek", 15, "M", 2},
+		{60,"helsinki", 45,"M", 1},
 	}
 
 	for _, tc := range testCases {
@@ -46,7 +47,8 @@ func TestReturnSingleEmployee(t *testing.T) {
 			AddRow(tc.Id, tc.Name, tc.Age, tc.Gender, tc.Role)
 
 		query := "SELECT id, name, age, gender, role FROM employee WHERE id = ?"
-		mock.ExpectQuery(query).WithArgs(tc.Id).WillReturnRows(rows)
+		mock.ExpectQuery(query).WithArgs(2).WillReturnRows(rows)
+		//mock.ExpectQuery(query).WithArgs(2).WillReturnRows(rows)
 		empHandler.returnSingleEmployee(w, req)
 		if w.Code != 200 {
 			t.Fatalf("expected status code to be 500, but got: %d", w.Code)
@@ -60,9 +62,12 @@ func TestReturnSingleEmployee(t *testing.T) {
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when marshaling expected json data", err)
 		}
-		check := bytes.Compare(expected, actual[0:len(actual)-1])
+		check := bytes.Compare(expected, actual[0 : len(actual)-1])
 		if check != 0 {
 			t.Errorf("the expected json: %s is different from actual %s", expected, actual)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("there were unfulfilled expectations: %s", err)
 		}
 	}
 }

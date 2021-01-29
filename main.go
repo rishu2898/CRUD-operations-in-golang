@@ -76,21 +76,25 @@ func (empHandler *EmployeeHandler) returnSingleEmployee(w http.ResponseWriter, r
 	if r.Method == "GET" {
 		vars := mux.Vars(r)
 		key, _ := strconv.Atoi(vars["id"])
-		res, _ := empHandler.DB.Query("SELECT id, name, age, gender, role FROM employee WHERE id = ?", key)
-		var emp []Employee
-		for res.Next() {
-			var row Employee
-			err := res.Scan(&row.Id, &row.Name, &row.Age, &row.Gender, &row.Role)
-			if err != nil {
-				log.Fatal(err)
+		res, err := empHandler.DB.Query("SELECT id, name, age, gender, role FROM employee WHERE id = ?", key)
+		if err != nil {
+			http.Error(w, "my own error message", http.StatusNoContent)
+		} else {
+			var emp []Employee
+			for res.Next() {
+				var row Employee
+				err := res.Scan(&row.Id, &row.Name, &row.Age, &row.Gender, &row.Role)
+				if err != nil {
+					log.Fatal(err)
+				}
+				emp = append(emp, row)
 			}
-			emp = append(emp, row)
+			if len(emp) == 0 {
+				fmt.Fprintf(w, "%v not found", http.StatusNoContent)
+				return
+			}
+			json.NewEncoder(w).Encode(emp)
 		}
-		if len(emp) == 0 {
-			fmt.Fprintf(w, "%v not found", http.StatusNoContent)
-			return
-		}
-		json.NewEncoder(w).Encode(emp)
 	}
 }
 
@@ -102,13 +106,15 @@ func (empHandler *EmployeeHandler) InsertRecord(w http.ResponseWriter, r *http.R
 		if err != nil {
 			panic(err)
 		}
-		res, err := empHandler.DB.Query(fmt.Sprintf("INSERT INTO employee(name, age, gender, role) VALUES('%v', %v, '%v', '%v')", emp.Name, emp.Age, emp.Gender, emp.Role))
+		res, err := empHandler.DB.Exec("INSERT INTO employee(name, age, gender, role) VALUES(?, ?, ?, ?)", emp.Name, emp.Age, emp.Gender, emp.Role)
 		if err != nil {
 			panic(err.Error())
 		}
+		id, _ := res.LastInsertId()
+		emp.Id = int(id)
 		data, err := json.Marshal(emp)
+		w.WriteHeader(http.StatusCreated)
 		w.Write(data)
-		res.Close()
 	}
 }
 
@@ -141,18 +147,16 @@ func (empHandler *EmployeeHandler) DeleteSingleRecord(w http.ResponseWriter, r *
 	if r.Method == "DELETE" {
 		vars := mux.Vars(r)
 		key := vars["id"]
-		fmt.Println(key)
 		res, _ := empHandler.DB.Exec(fmt.Sprintf("DELETE FROM employee WHERE id = %v", key))
 		// return the number of rows affected by query
 		count, _ := res.RowsAffected()
 		if count == 0 {
-			fmt.Fprintf(w, "%v not found", http.StatusNoContent)
+			http.Error(w, "Record Not Found", http.StatusBadRequest)
 			return
 		}
-		fmt.Fprintf(w, "record having id: %v deleted successfully", key)
+		http.Error(w, "Record deleted successfully", http.StatusNoContent)
 	}
 }
-
 func handleRequests() {
 	// connecting to the database
 	db, err := sql.Open("mysql", "rishabh:Rishu2898@@(127.0.0.1)/company")
